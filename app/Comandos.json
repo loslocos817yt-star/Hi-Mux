@@ -1,0 +1,23 @@
+{
+  "commands": {
+    "patti-get": {
+      "usage": "patti-get [archivo]",
+      "steps": [
+        {"type": "print", "message": "Conectando a Hi-Mux Repo..."},
+        {"type": "download", "url": "https://raw.githubusercontent.com/.../Hi-Mux/main/", "save_to": "files/"},
+        {"type": "print", "message": "Descarga finalizada."}
+      ]
+    },
+    "ls": {
+      "steps": [
+        {"type": "list_dir", "path": "internal_files"}
+      ]
+    },
+    "update-commands": {
+      "steps": [
+        {"type": "print", "message": "Buscando actualizaciones de Hi-Mux..."},
+        {"type": "sync_json", "url": "https://.../commands.json"}
+      ]
+    }
+  }
+}
