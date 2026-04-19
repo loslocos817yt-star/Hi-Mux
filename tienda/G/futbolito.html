@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { background: #000; margin: 0; overflow: hidden; font-family: monospace; color: #fff; }
+        canvas { display: block; width: 100vw; height: 100vh; image-rendering: pixelated; background: #052b05; }
+        #ui { position: absolute; top: 5px; width: 100%; text-align: center; font-size: 20px; text-shadow: 2px 2px #000; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div id="ui">AREG-B0L: <span id="score">0 - 0</span></div>
+    <canvas id="field"></canvas>
+
+    <script>
+        const canvas = document.getElementById('field');
+        const ctx = canvas.getContext('2d');
+        const scoreDisp = document.getElementById('score');
+
+        canvas.width = 320; canvas.height = 240;
+
+        let score = [0, 0];
+        let ball = { x: 160, y: 120, vx: 2, vy: 1.5, r: 4 };
+        
+        // Barras (Futbolito style)
+        let barY = 120; // Tu barra (Defensa/Media)
+        let cpuY = 120; // Barra CPU
+        const barX = 60;
+        const cpuX = 260;
+        const barH = 60; // Altura de la barra de jugadores
+
+        const keys = {};
+        document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+        document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+        function resetBall() {
+            ball.x = 160; ball.y = 120;
+            ball.vx = (Math.random() > 0.5 ? 2 : -2);
+            ball.vy = (Math.random() - 0.5) * 4;
+        }
+
+        function update() {
+            // Control Jugador
+            if (keys['arrowup']) barY = Math.max(30, barY - 4);
+            if (keys['arrowdown']) barY = Math.min(210, barY + 4);
+
+            // Inteligencia Artificial Simple
+            if (ball.y > cpuY) cpuY += 2.5;
+            if (ball.y < cpuY) cpuY -= 2.5;
+
+            // Movimiento Bola
+            ball.x += ball.vx;
+            ball.y += ball.vy;
+
+            // Rebote Paredes
+            if (ball.y < 0 || ball.y > 240) ball.vy *= -1;
+
+            // Colisión con Barra Jugador
+            if (ball.x < barX + 5 && ball.x > barX - 5) {
+                if (ball.y > barY - barH/2 && ball.y < barY + barH/2) {
+                    ball.vx = Math.abs(ball.vx) + 0.2;
+                    ball.vy += (ball.y - barY) * 0.1; // Efecto según donde pegue
+                }
+            }
+
+            // Colisión con Barra CPU
+            if (ball.x > cpuX - 5 && ball.x < cpuX + 5) {
+                if (ball.y > cpuY - barH/2 && ball.y < cpuY + barH/2) {
+                    ball.vx = -Math.abs(ball.vx) - 0.2;
+                    ball.vy += (ball.y - cpuY) * 0.1;
+                }
+            }
+
+            // Goles
+            if (ball.x < 0) { score[1]++; resetBall(); }
+            if (ball.x > 320) { score[0]++; resetBall(); }
+
+            scoreDisp.innerText = `${score[0]} - ${score[1]}`;
+            draw();
+            requestAnimationFrame(update);
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, 320, 240);
+            
+            // Campo
+            ctx.strokeStyle = "rgba(255,255,255,0.3)";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(10, 10, 300, 220);
+            ctx.beginPath(); ctx.moveTo(160, 10); ctx.lineTo(160, 230); ctx.stroke();
+
+            // Dibujar Barras
+            ctx.fillStyle = "#fff";
+            // Jugador (Azul)
+            ctx.fillStyle = "#44f";
+            ctx.fillRect(barX - 2, barY - barH/2, 4, barH);
+            for(let i=-1; i<=1; i++) { // Los monitos
+                ctx.fillStyle = "#fff";
+                ctx.fillRect(barX - 5, barY + (i*20) - 5, 10, 10);
+            }
+
+            // CPU (Rojo)
+            ctx.fillStyle = "#f44";
+            ctx.fillRect(cpuX - 2, cpuY - barH/2, 4, barH);
+            for(let i=-1; i<=1; i++) {
+                ctx.fillStyle = "#fff";
+                ctx.fillRect(cpuX - 5, cpuY + (i*20) - 5, 10, 10);
+            }
+
+            // Pelota
+            ctx.fillStyle = "#ff0";
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        update();
+    </script>
+</body>
+</html>
