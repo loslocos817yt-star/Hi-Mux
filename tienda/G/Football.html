@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AreG Penalty Classic</title>
+    <style>
+        body {
+            margin: 0; background: #004d00; overflow: hidden;
+            font-family: 'Courier New', monospace; color: white;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100vh; user-select: none;
+        }
+
+        /* Marcador Estilo Retro */
+        #hud {
+            position: fixed; top: 10px; width: 90%;
+            display: flex; justify-content: space-between;
+            font-size: 20px; font-weight: bold;
+            background: rgba(0,0,0,0.7); padding: 5px; border-radius: 5px;
+        }
+        .g-color { color: #00ff00; } /* G de AreG tricolor */
+        .r-color { color: #ff0000; } /* R */
+        
+        /* La Portería */
+        #goal-area {
+            position: relative; width: 300px; height: 180px;
+            border: 8px solid white; border-bottom: none;
+            background: rgba(255,255,255,0.1);
+        }
+        #net {
+            position: absolute; width: 100%; height: 100%;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px);
+            background-size: 15px 15px;
+        }
+
+        /* El Portero (Tú) */
+        #goalkeeper {
+            position: absolute; bottom: 0; left: 135px; /* Centro */
+            width: 30px; height: 60px; background: #0000ff; /* Azul tricolor */
+            border-radius: 5px; border: 2px solid white;
+            transition: left 0.2s ease-out; z-index: 10;
+        }
+
+        /* El Balón */
+        #ball {
+            position: absolute; bottom: -80px; left: 135px;
+            width: 30px; height: 30px; background: white;
+            border-radius: 50%; border: 2px solid black;
+            transition: all 0.5s cubic-bezier(0, 0, 0.2, 1);
+            z-index: 5;
+        }
+
+        /* Puntos de Mira */
+        #target {
+            position: absolute; width: 20px; height: 20px;
+            border: 3px solid red; border-radius: 50%;
+            display: none; z-index: 20;
+        }
+
+        /* Pantalla de Estado */
+        #status-screen {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center; background: rgba(0,0,0,0.9);
+            padding: 20px; border-radius: 10px; display: none; z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="hud">
+        <div id="p-score">Pattitex: 0</div>
+        <div>|<span class="g-color">A</span>r<span class="r-color">é</span> G|</div>
+        <div id="g-score">Portero: 0</div>
+    </div>
+
+    <div id="goal-area">
+        <div id="net"></div>
+        <div id="target"></div>
+        <div id="goalkeeper"></div>
+        <div id="ball"></div>
+    </div>
+
+    <div id="status-screen">
+        <h1 id="result-text"></h1>
+        <p>Presiona [B] (x) para reiniciar</p>
+    </div>
+
+    <script>
+        const ball = document.getElementById('ball');
+        const keeper = document.getElementById('goalkeeper');
+        const target = document.getElementById('target');
+        const statusScreen = document.getElementById('status-screen');
+        const resultText = document.getElementById('result-text');
+        
+        let pScore = 0; let gScore = 0;
+        let isShooting = false;
+        
+        // Puntos de mira definidos (Y, X)
+        const targets = [
+            { y: 20, x: 20 },   // Sup Izq
+            { y: 20, x: 140 },  // Sup Centro
+            { y: 20, x: 260 },  // Sup Der
+            { y: 90, x: 20 },   // Mid Izq
+            { y: 90, x: 260 },  // Mid Der
+            { y: 150, x: 80 },  // Inf Izq
+            { y: 150, x: 200 }  // Inf Der
+        ];
+        
+        let currentTargetIndex = 1; // Empieza en Sup Centro
+
+        function updateTarget() {
+            if (isShooting) return;
+            const t = targets[currentTargetIndex];
+            target.style.display = 'block';
+            target.style.top = t.y + 'px';
+            target.style.left = t.x + 'px';
+        }
+
+        function shoot() {
+            if (isShooting) return;
+            isShooting = true;
+            target.style.display = 'none';
+
+            // 1. El Portero (IA) decide dónde tirarse (250ms antes del impacto)
+            const keeperZones = [20, 135, 260]; // Izq, Centro, Der (valores X)
+            const keeperDecision = keeperZones[Math.floor(Math.random() * keeperZones.length)];
+            
+            setTimeout(() => {
+                keeper.style.left = keeperDecision + 'px';
+            }, 100);
+
+            // 2. Animación del Balón
+            const t = targets[currentTargetIndex];
+            ball.style.transform = 'scale(0.5)'; // Efecto profundidad
+            ball.style.bottom = (180 - t.y - 15) + 'px'; // Ajuste a la portería
+            ball.style.left = t.x + 'px';
+
+            // 3. Resolver el Tiro (Cine Digital)
+            setTimeout(() => {
+                // Comprobamos si el portero cubrió la zona
+                const ballX = t.x;
+                const keeperX = keeperDecision;
+                
+                // Margen de atajada (±40px)
+                const isSaved = (ballX >= keeperX - 20) && (ballX <= keeperX + 50);
+
+                if (isSaved) {
+                    gScore++;
+                    resultText.innerHTML = "❌ ¡ATAJADA!";
+                    resultText.style.color = "#ff0000";
+                    ball.style.transform = 'scale(0.5) translate(-20px, 20px)'; // Rebote
+                } else {
+                    pScore++;
+                    resultText.innerHTML = "⚽ ¡GOOOOL!";
+                    resultText.style.color = "#00ff00";
+                }
+
+                document.getElementById('p-score').innerHTML = "Pattitex: " + pScore;
+                document.getElementById('g-score').innerHTML = "Portero: " + gScore;
+                statusScreen.style.display = 'block';
+
+            }, 500); // Tiempo que tarda el balón en llegar
+        }
+
+        function reset() {
+            isShooting = false;
+            statusScreen.style.display = 'none';
+            
+            // Reset posiciones
+            ball.style.transform = 'scale(1)';
+            ball.style.bottom = '-80px';
+            ball.style.left = '135px';
+            keeper.style.left = '135px';
+            
+            updateTarget();
+        }
+
+        // --- MAPEO DE CONTROLES DE ARE G ---
+        // Usamos 'keydown' porque bios.js mapea los toques a eventos de teclado.
+        window.addEventListener('keydown', (e) => {
+            if (statusScreen.style.display === 'block') {
+                if (e.key === 'x') reset(); // B -> Reiniciar
+                return;
+            }
+
+            if (isShooting) return;
+
+            switch(e.key) {
+                case 'ArrowLeft':
+                    currentTargetIndex = (currentTargetIndex > 0) ? currentTargetIndex - 1 : targets.length - 1;
+                    updateTarget();
+                    break;
+                case 'ArrowRight':
+                    currentTargetIndex = (currentTargetIndex < targets.length - 1) ? currentTargetIndex + 1 : 0;
+                    updateTarget();
+                    break;
+                case 'ArrowUp':
+                    // Salto rápido a zona superior
+                    if (currentTargetIndex > 2) currentTargetIndex = 1;
+                    updateTarget();
+                    break;
+                case 'ArrowDown':
+                    // Salto rápido a zona inferior
+                    if (currentTargetIndex < 5) currentTargetIndex = 6;
+                    updateTarget();
+                    break;
+                case 'z': // Botón A -> Tirar
+                    shoot();
+                    break;
+            }
+        });
+
+        // Iniciar
+        updateTarget();
+
+    </script>
+</body>
+</html>
